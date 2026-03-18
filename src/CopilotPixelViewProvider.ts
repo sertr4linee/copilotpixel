@@ -84,8 +84,6 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'rescanSessions') {
-        // Clear known set and stop the timer so ensureSessionScan can restart.
-        // Then immediately scan: any session not already in agents gets agentCreated.
         this.knownSessionIds.clear();
         if (this.sessionScanTimer.current) {
           clearInterval(this.sessionScanTimer.current);
@@ -102,7 +100,48 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
           this.jsonlPollTimers,
           this.webview,
           this.persistSessions,
+          this.workspacePaths,
         );
+        this.startSessionScan();
+      } else if (message.type === 'setShowAllSessions') {
+        const showAll = message.showAll as boolean;
+        if (this.showAllSessions === showAll) return;
+        this.showAllSessions = showAll;
+        if (!showAll) {
+          // Switched to workspace-only: remove agents not belonging to this workspace
+          pruneAgentsOutsideWorkspace(
+            this.agents,
+            this.knownSessionIds,
+            this.workspacePaths,
+            this.fileWatchers,
+            this.pollingTimers,
+            this.waitingTimers,
+            this.permissionTimers,
+            this.jsonlPollTimers,
+            this.webview,
+            this.persistSessions,
+          );
+        } else {
+          // Switched to show-all: discover sessions from other workspaces
+          scanForNewSessions(
+            this.knownSessionIds,
+            this.nextAgentId,
+            this.agents,
+            this.fileWatchers,
+            this.pollingTimers,
+            this.waitingTimers,
+            this.permissionTimers,
+            this.jsonlPollTimers,
+            this.webview,
+            this.persistSessions,
+            [], // empty = no filter
+          );
+        }
+        // Restart interval with updated filter
+        if (this.sessionScanTimer.current) {
+          clearInterval(this.sessionScanTimer.current);
+          this.sessionScanTimer.current = null;
+        }
         this.startSessionScan();
       } else if (message.type === 'focusAgent') {
         // No terminal to focus in Copilot CLI mode — open the session folder instead
