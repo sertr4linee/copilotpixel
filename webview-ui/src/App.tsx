@@ -4,7 +4,7 @@ import { AgentDetailPanel } from './components/AgentDetailPanel.js';
 import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
-import { ScenePicker, useSceneTheme } from './components/ScenePicker.js';
+import { useSceneTheme } from './components/ScenePicker.js';
 import { StatsHeader } from './components/StatsHeader.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
@@ -404,6 +404,16 @@ function App() {
           onSelectAgent={handleSelectAgent}
         />
       )}
+
+      <AgentDetailPanel
+        agentId={detailPanelAgentId}
+        sessionMeta={sessionMeta}
+        agentIntents={agentIntents}
+        agentToolHistory={agentToolHistory}
+        agentStatuses={agentStatuses}
+        onClose={() => setDetailPanelAgentId(null)}
+        onFocusAgent={handleFocusAgent}
+      />
 
       {showMigrationNotice && (
         <div
