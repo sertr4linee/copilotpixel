@@ -21,12 +21,12 @@ export function getSessionsBasePath(): string {
 }
 
 /**
- * Read the workspace.yaml from a session directory and extract cwd / git_root.
+ * Read the workspace.yaml from a session directory and extract cwd / git_root / summary.
  * Returns null if the file doesn't exist or can't be parsed.
  */
 export function readSessionWorkspaceMeta(
   sessionDir: string,
-): { cwd: string; gitRoot?: string } | null {
+): { cwd: string; gitRoot?: string; summary?: string } | null {
   const yamlPath = path.join(sessionDir, 'workspace.yaml');
   try {
     if (!fs.existsSync(yamlPath)) return null;
@@ -34,9 +34,23 @@ export function readSessionWorkspaceMeta(
     const cwd = content.match(/^cwd:\s*(.+)$/m)?.[1]?.trim();
     if (!cwd) return null;
     const gitRoot = content.match(/^git_root:\s*(.+)$/m)?.[1]?.trim();
-    return { cwd, gitRoot };
+    const summary = content.match(/^summary:\s*(.+)$/m)?.[1]?.trim();
+    return { cwd, gitRoot, summary };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Count the number of checkpoint files in a session's checkpoints/ directory.
+ */
+export function readCheckpointCount(sessionDir: string): number {
+  const checkpointsDir = path.join(sessionDir, 'checkpoints');
+  try {
+    if (!fs.existsSync(checkpointsDir)) return 0;
+    return fs.readdirSync(checkpointsDir).filter((f) => f.endsWith('.md') || f.endsWith('.json')).length;
+  } catch {
+    return 0;
   }
 }
 
@@ -468,12 +482,27 @@ export function sendExistingAgents(
   >(WORKSPACE_KEY_AGENT_SEATS, {});
 
   const folderNames: Record<number, string> = {};
-  const sessionMeta: Record<number, { branch?: string; repository?: string; cwd?: string }> = {};
+  const sessionMeta: Record<
+    number,
+    { branch?: string; repository?: string; cwd?: string; startTime?: string; summary?: string; checkpointCount?: number }
+  > = {};
 
   for (const [id, agent] of agents) {
     folderNames[id] = agent.sessionId.slice(0, 8);
-    if (agent.branch || agent.repository || agent.cwd) {
-      sessionMeta[id] = { branch: agent.branch, repository: agent.repository, cwd: agent.cwd };
+    const base = getSessionsBasePath();
+    const sessionDir = path.join(base, agent.sessionId);
+    const extraMeta = readSessionWorkspaceMeta(sessionDir);
+    const checkpointCount = readCheckpointCount(sessionDir);
+    const summary = agent.summary ?? extraMeta?.summary;
+    if (agent.branch || agent.repository || agent.cwd || agent.startTime || summary || checkpointCount > 0) {
+      sessionMeta[id] = {
+        branch: agent.branch,
+        repository: agent.repository,
+        cwd: agent.cwd,
+        startTime: agent.startTime,
+        summary,
+        checkpointCount: checkpointCount > 0 ? checkpointCount : undefined,
+      };
     }
   }
 

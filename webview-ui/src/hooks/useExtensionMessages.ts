@@ -47,6 +47,7 @@ export interface ExtensionMessageState {
   selectedAgent: number | null;
   agentTools: Record<number, ToolActivity[]>;
   agentStatuses: Record<number, string>;
+  agentIntents: Record<number, string>;
   subagentTools: Record<number, Record<string, ToolActivity[]>>;
   subagentCharacters: SubagentCharacter[];
   sessionMeta: Record<number, SessionMeta>;
@@ -74,6 +75,7 @@ export function useExtensionMessages(
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({});
+  const [agentIntents, setAgentIntents] = useState<Record<number, string>>({});
   const [subagentTools, setSubagentTools] = useState<
     Record<number, Record<string, ToolActivity[]>>
   >({});
@@ -133,6 +135,18 @@ export function useExtensionMessages(
         setSelectedAgent(id);
         os.addAgent(id, undefined, undefined, undefined, undefined, folderName);
         saveAgentSeats(os);
+      } else if (msg.type === 'agentIntent') {
+        const id = msg.id as number;
+        const intent = msg.intent as string | null;
+        setAgentIntents((prev) => {
+          if (!intent) {
+            if (!(id in prev)) return prev;
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          }
+          return { ...prev, [id]: intent };
+        });
       } else if (msg.type === 'agentClosed') {
         const id = msg.id as number;
         setAgents((prev) => prev.filter((a) => a !== id));
@@ -156,6 +170,12 @@ export function useExtensionMessages(
           return next;
         });
         setSessionMeta((prev) => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        setAgentIntents((prev) => {
           if (!(id in prev)) return prev;
           const next = { ...prev };
           delete next[id];
@@ -411,6 +431,7 @@ export function useExtensionMessages(
     selectedAgent,
     agentTools,
     agentStatuses,
+    agentIntents,
     subagentTools,
     subagentCharacters,
     sessionMeta,

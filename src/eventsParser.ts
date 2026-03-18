@@ -1,8 +1,11 @@
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 
 import {
   BASH_COMMAND_DISPLAY_MAX_LENGTH,
+  COPILOT_SESSIONS_DIR,
   TASK_DESCRIPTION_DISPLAY_MAX_LENGTH,
   TEXT_IDLE_DELAY_MS,
   TOOL_DONE_DELAY_MS,
@@ -15,6 +18,31 @@ import {
   startWaitingTimer,
 } from './timerManager.js';
 import type { SessionState } from './types.js';
+
+function getSessionDir(sessionId: string): string {
+  return path.join(os.homedir(), COPILOT_SESSIONS_DIR, sessionId);
+}
+
+function readWorkspaceSummary(sessionDir: string): string | undefined {
+  const yamlPath = path.join(sessionDir, 'workspace.yaml');
+  try {
+    if (!fs.existsSync(yamlPath)) return undefined;
+    const content = fs.readFileSync(yamlPath, 'utf-8');
+    return content.match(/^summary:\s*(.+)$/m)?.[1]?.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+function countCheckpoints(sessionDir: string): number {
+  const dir = path.join(sessionDir, 'checkpoints');
+  try {
+    if (!fs.existsSync(dir)) return 0;
+    return fs.readdirSync(dir).filter((f) => f.endsWith('.md') || f.endsWith('.json')).length;
+  } catch {
+    return 0;
+  }
+}
 
 // Tools that never block on permission — safe to ignore for permission heuristic
 export const PERMISSION_EXEMPT_TOOLS = new Set([
@@ -131,22 +159,34 @@ export function processEventsLine(
       agent.cwd = ctx.cwd as string | undefined;
       agent.branch = ctx.branch as string | undefined;
       agent.repository = ctx.repository as string | undefined;
-      // Notify webview of metadata update
+      agent.startTime = (data.startTime as string | undefined) ?? undefined;
+
+      const sessionDir = getSessionDir(agent.sessionId);
+      if (!agent.summary) agent.summary = readWorkspaceSummary(sessionDir);
+      const checkpointCount = countCheckpoints(sessionDir);
+
       webview?.postMessage({
         type: 'sessionMetadata',
         id: agentId,
-        branch: agent.branch,
-        repository: agent.repository,
-        cwd: agent.cwd,
+        meta: {
+          branch: agent.branch,
+          repository: agent.repository,
+          cwd: agent.cwd,
+          startTime: agent.startTime,
+          summary: agent.summary,
+          checkpointCount: checkpointCount > 0 ? checkpointCount : undefined,
+        },
       });
       break;
     }
 
     case 'user.message': {
-      // New user turn — reset all activity
+      // New user turn — reset all activity and clear current intent
       cancelWaitingTimer(agentId, waitingTimers);
       clearAgentActivity(agent, agentId, permissionTimers, webview);
       agent.hadToolsInTurn = false;
+      agent.currentIntent = undefined;
+      webview?.postMessage({ type: 'agentIntent', id: agentId, intent: null });
       break;
     }
 
@@ -193,6 +233,13 @@ export function processEventsLine(
       agent.activeToolIds.add(toolCallId);
       agent.activeToolStatuses.set(toolCallId, status);
       agent.activeToolNames.set(toolCallId, toolName);
+
+      // report_intent: broadcast current intent to webview for display
+      if (toolName === 'report_intent') {
+        const intent = typeof toolArgs.intent === 'string' ? toolArgs.intent : '';
+        agent.currentIntent = intent;
+        webview?.postMessage({ type: 'agentIntent', id: agentId, intent });
+      }
 
       webview?.postMessage({ type: 'agentStatus', id: agentId, status: 'active' });
       webview?.postMessage({ type: 'agentToolStart', id: agentId, toolId: toolCallId, status });

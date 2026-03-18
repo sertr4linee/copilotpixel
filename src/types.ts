@@ -17,6 +17,10 @@ export interface SessionState {
   branch?: string;
   repository?: string;
   cwd?: string;
+  startTime?: string;    // ISO timestamp from session.start
+  summary?: string;      // from workspace.yaml
+  checkpointCount?: number;
+  currentIntent?: string; // last report_intent text
 }
 
 export interface PersistedSession {
