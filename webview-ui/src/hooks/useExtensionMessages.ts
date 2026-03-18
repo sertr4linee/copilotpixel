@@ -53,6 +53,7 @@ export interface ExtensionMessageState {
   layoutReady: boolean;
   layoutWasReset: boolean;
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> };
+  showAllSessions: boolean;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -84,7 +85,7 @@ export function useExtensionMessages(
     { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> } | undefined
   >();
 
-  const layoutReadyRef = useRef(false);
+  const [showAllSessions, setShowAllSessions] = useState(false);
 
   useEffect(() => {
     let pendingAgents: Array<{
