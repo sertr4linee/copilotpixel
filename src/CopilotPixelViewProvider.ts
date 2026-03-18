@@ -4,15 +4,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
-  getSessionsBasePath,
-  persistSessions,
-  removeAgent,
-  restoreSessions,
-  sendExistingAgents,
-  sendLayout,
-  ensureSessionScan,
-} from './sessionManager.js';
-import {
   loadCharacterSprites,
   loadDefaultLayout,
   loadFloorTiles,
@@ -30,6 +21,15 @@ import {
 } from './constants.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import {
+  ensureSessionScan,
+  getSessionsBasePath,
+  persistSessions,
+  removeAgent,
+  restoreSessions,
+  sendExistingAgents,
+  sendLayout,
+} from './sessionManager.js';
 import type { SessionState } from './types.js';
 
 export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {

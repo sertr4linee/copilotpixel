@@ -11,8 +11,8 @@ import {
   WORKSPACE_KEY_AGENT_SEATS,
   WORKSPACE_KEY_AGENTS,
 } from './constants.js';
-import { readNewLines, startFileWatching } from './sessionFileWatcher.js';
 import { migrateAndLoadLayout } from './layoutPersistence.js';
+import { readNewLines, startFileWatching } from './sessionFileWatcher.js';
 import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
 import type { PersistedSession, SessionState } from './types.js';
 
