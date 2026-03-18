@@ -7,11 +7,16 @@ import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { migrateLayoutColors } from '../office/layout/layoutSerializer.js';
 import { setCharacterTemplates } from '../office/sprites/spriteData.js';
 import { extractToolName } from '../office/toolUtils.js';
+import { CharacterState, TILE_SIZE } from '../office/types.js';
 import type { OfficeLayout, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
 import { vscode } from '../vscodeApi.js';
 import type { SessionMeta } from '../components/AgentLabels.js';
 import type { ToolHistoryEntry } from '../components/AgentDetailPanel.js';
+
+// Entrance tile — top-left corner of the walkable floor area
+const ENTRANCE_COL = 2;
+const ENTRANCE_ROW = 11;
 
 export interface SubagentCharacter {
   id: number;
@@ -92,6 +97,51 @@ export function useExtensionMessages(
 
   const [showAllSessions, setShowAllSessions] = useState(false);
   const layoutReadyRef = useRef(false);
+  // Agents walking to exit before removal
+  const pendingExitsRef = useRef<Map<number, { col: number; row: number }>>(new Map());
+
+  // Poll walk-out arrivals: when agent reaches exit tile, trigger despawn
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const pending = pendingExitsRef.current;
+      if (pending.size === 0) return;
+      const os = getOfficeState();
+      for (const [id, target] of pending) {
+        const ch = os.characters.get(id);
+        if (
+          !ch ||
+          (ch.path.length === 0 && ch.tileCol === target.col && ch.tileRow === target.row)
+        ) {
+          os.removeAgent(id);
+          pending.delete(id);
+        }
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [getOfficeState]);
+
+  // Social wave: periodically show waiting bubble when two idle agents are nearby
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const os = getOfficeState();
+      const idleChars = Array.from(os.characters.values()).filter(
+        (ch) => !ch.isSubagent && !ch.isActive && ch.state !== CharacterState.WALK && !ch.bubbleType,
+      );
+      if (idleChars.length < 2) return;
+      for (let i = 0; i < idleChars.length; i++) {
+        for (let j = i + 1; j < idleChars.length; j++) {
+          const a = idleChars[i];
+          const b = idleChars[j];
+          const dist = Math.abs(a.tileCol - b.tileCol) + Math.abs(a.tileRow - b.tileRow);
+          if (dist <= 4) {
+            os.showWaitingBubble(a.id);
+            return;
+          }
+        }
+      }
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [getOfficeState]);
 
   useEffect(() => {
     let pendingAgents: Array<{
@@ -136,7 +186,19 @@ export function useExtensionMessages(
         const folderName = msg.folderName as string | undefined;
         setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]));
         setSelectedAgent(id);
-        os.addAgent(id, undefined, undefined, undefined, undefined, folderName);
+        // Walk-in: spawn silently at seat then teleport to entrance and walk in
+        os.addAgent(id, undefined, undefined, undefined, true, folderName);
+        const ch = os.characters.get(id);
+        if (ch) {
+          ch.tileCol = ENTRANCE_COL;
+          ch.tileRow = ENTRANCE_ROW;
+          ch.x = ENTRANCE_COL * TILE_SIZE + TILE_SIZE / 2;
+          ch.y = ENTRANCE_ROW * TILE_SIZE + TILE_SIZE / 2;
+          ch.state = CharacterState.IDLE;
+          ch.path = [];
+          ch.moveProgress = 0;
+        }
+        os.sendToSeat(id);
         saveAgentSeats(os);
       } else if (msg.type === 'agentIntent') {
         const id = msg.id as number;
@@ -201,7 +263,14 @@ export function useExtensionMessages(
         });
         os.removeAllSubagents(id);
         setSubagentCharacters((prev) => prev.filter((s) => s.parentAgentId !== id));
-        os.removeAgent(id);
+        // Walk-out: send to entrance, remove after arrival
+        const ch = os.characters.get(id);
+        if (ch) {
+          os.walkToTile(id, ENTRANCE_COL, ENTRANCE_ROW);
+          pendingExitsRef.current.set(id, { col: ENTRANCE_COL, row: ENTRANCE_ROW });
+        } else {
+          os.removeAgent(id);
+        }
       } else if (msg.type === 'existingAgents') {
         const incoming = msg.agents as number[];
         const meta = (msg.agentMeta || {}) as Record<
