@@ -143,6 +143,7 @@ function App() {
     layoutReady,
     layoutWasReset,
     loadedAssets,
+    showAllSessions,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false);
@@ -272,6 +273,8 @@ function App() {
       <BottomToolbar
         isEditMode={editor.isEditMode}
         onRescanSessions={editor.handleRescanSessions}
+        showAllSessions={showAllSessions}
+        onToggleShowAll={editor.handleToggleShowAll}
         onToggleEditMode={editor.handleToggleEditMode}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
