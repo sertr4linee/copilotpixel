@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { ToolActivity } from '../office/types.js';
+import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
 import type { SessionMeta } from './AgentLabels.js';
 
 export interface ToolHistoryEntry {
@@ -14,6 +16,8 @@ interface AgentDetailPanelProps {
   agentIntents: Record<number, string>;
   agentToolHistory: Record<number, ToolHistoryEntry[]>;
   agentStatuses: Record<number, string>;
+  agentTools: Record<number, ToolActivity[]>;
+  subagentCharacters: SubagentCharacter[];
   onClose: () => void;
   onFocusAgent: (id: number) => void;
 }
@@ -94,6 +98,8 @@ export function AgentDetailPanel({
   agentIntents,
   agentToolHistory,
   agentStatuses,
+  agentTools,
+  subagentCharacters,
   onClose,
   onFocusAgent,
 }: AgentDetailPanelProps) {
@@ -116,6 +122,13 @@ export function AgentDetailPanel({
   const isActive = status === 'active';
   const duration = formatDuration(meta?.startTime);
   const folderName = meta?.cwd ? (meta.cwd.split('/').pop() ?? meta.cwd) : `Agent #${agentId}`;
+
+  // Subagents spawned by this agent
+  const mySubagents = subagentCharacters.filter((s) => s.parentAgentId === agentId);
+  // Active task tools = running subagent tasks
+  const taskTools = (agentTools[agentId] ?? []).filter(
+    (t) => !t.done && t.status.startsWith('Subtask'),
+  );
 
   return (
     <>
@@ -277,6 +290,102 @@ export function AgentDetailPanel({
             📂 Open session folder
           </button>
         </div>
+
+        {/* Agent hierarchy tree */}
+        {(mySubagents.length > 0 || taskTools.length > 0) && (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderBottom: '1px solid var(--pixel-border)',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{ fontSize: '17px', color: 'var(--pixel-text-dim)', marginBottom: 6 }}
+            >
+              Agents actifs
+            </div>
+            {/* Parent node */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: '16px' }}>👤</span>
+              <span
+                style={{
+                  fontSize: '16px',
+                  color: 'var(--pixel-text)',
+                  fontWeight: 600,
+                }}
+              >
+                {folderName}
+              </span>
+              <span
+                style={{
+                  fontSize: '13px',
+                  color: isActive
+                    ? 'var(--vscode-charts-green, #89d185)'
+                    : 'var(--vscode-charts-yellow, #cca700)',
+                }}
+              >
+                {isActive ? '● active' : '◎ waiting'}
+              </span>
+            </div>
+            {/* Subagent nodes */}
+            {mySubagents.map((sub) => {
+              const task = taskTools.find((t) => t.status.includes(sub.label.split(':').pop()?.trim() ?? ''));
+              return (
+                <div
+                  key={sub.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 6,
+                    marginLeft: 16,
+                    marginBottom: 3,
+                  }}
+                >
+                  {/* Tree branch */}
+                  <span style={{ color: 'var(--pixel-text-dim)', fontSize: '16px', lineHeight: 1.4 }}>
+                    └─
+                  </span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: '16px' }}>🤖</span>
+                      <span style={{ fontSize: '15px', color: 'var(--vscode-charts-blue, #3794ff)' }}>
+                        {sub.label || `Sub #${sub.id}`}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--vscode-charts-green, #89d185)',
+                          background: 'rgba(137,209,133,0.15)',
+                          padding: '1px 5px',
+                          border: '1px solid rgba(137,209,133,0.4)',
+                        }}
+                      >
+                        running
+                      </span>
+                    </div>
+                    {task && (
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          color: 'var(--pixel-text-dim)',
+                          marginTop: 2,
+                          marginLeft: 22,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={task.status}
+                      >
+                        {task.status}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Tool history */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
