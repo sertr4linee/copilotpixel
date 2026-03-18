@@ -38,8 +38,53 @@ export function discoverSessionDirs(): string[] {
 }
 
 /**
+ * Silently register all currently discovered sessions into `agents` and `knownSessionIds`
+ * WITHOUT sending any `agentCreated` webview messages.
+ *
+ * Call this at startup BEFORE `sendExistingAgents` so the full list is available for
+ * the `existingAgents` message. `restoreSessions()` already handles previously-persisted
+ * sessions, so only newly-found ones are registered here.
+ */
+export function seedInitialSessions(
+  knownSessionIds: Set<string>,
+  nextAgentIdRef: { current: number },
+  agents: Map<number, SessionState>,
+  fileWatchers: Map<number, fs.FSWatcher>,
+  pollingTimers: Map<number, ReturnType<typeof setInterval>>,
+  waitingTimers: Map<number, ReturnType<typeof setTimeout>>,
+  permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
+  jsonlPollTimers: Map<number, ReturnType<typeof setInterval>>,
+  persistSessions: () => void,
+): void {
+  const managedSessionIds = new Set<string>(
+    [...agents.values()].map((a) => a.sessionId),
+  );
+  for (const sessionId of discoverSessionDirs()) {
+    if (!knownSessionIds.has(sessionId)) {
+      knownSessionIds.add(sessionId);
+      if (!managedSessionIds.has(sessionId)) {
+        // Pass undefined for webview so no agentCreated message is posted
+        registerNewSession(
+          sessionId,
+          nextAgentIdRef,
+          agents,
+          fileWatchers,
+          pollingTimers,
+          waitingTimers,
+          permissionTimers,
+          jsonlPollTimers,
+          undefined,
+          persistSessions,
+        );
+      }
+    }
+  }
+}
+
+/**
  * Ensure the session scan interval is running.
- * Scans ~/.copilot/session-state/ for new UUID directories and auto-registers them.
+ * Only catches sessions that appear AFTER startup — `seedInitialSessions` handles
+ * existing ones. New sessions discovered by the interval DO send `agentCreated`.
  */
 export function ensureSessionScan(
   knownSessionIds: Set<string>,
@@ -55,22 +100,6 @@ export function ensureSessionScan(
   persistSessions: () => void,
 ): void {
   if (sessionScanTimerRef.current) return;
-
-  // Run immediately so existing sessions appear at once (don't wait for first tick).
-  // restoreSessions() already populated knownSessionIds for restored sessions, so
-  // only truly new sessions will be registered here.
-  scanForNewSessions(
-    knownSessionIds,
-    nextAgentIdRef,
-    agents,
-    fileWatchers,
-    pollingTimers,
-    waitingTimers,
-    permissionTimers,
-    jsonlPollTimers,
-    webview,
-    persistSessions,
-  );
 
   sessionScanTimerRef.current = setInterval(() => {
     scanForNewSessions(
@@ -88,7 +117,11 @@ export function ensureSessionScan(
   }, SESSION_SCAN_INTERVAL_MS);
 }
 
-function scanForNewSessions(
+/**
+ * Scan for sessions not yet known and register them, sending `agentCreated` for each.
+ * Used by the interval timer and by the manual rescan handler.
+ */
+export function scanForNewSessions(
   knownSessionIds: Set<string>,
   nextAgentIdRef: { current: number },
   agents: Map<number, SessionState>,
@@ -100,17 +133,15 @@ function scanForNewSessions(
   webview: vscode.Webview | undefined,
   persistSessions: () => void,
 ): void {
-  // Build set of session IDs that already have a managed agent (survives rescan)
-  const managedSessionIds = new Set<string>();
-  for (const agent of agents.values()) {
-    managedSessionIds.add(agent.sessionId);
-  }
+  // Build set of session IDs that already have an agent (guards against duplicates on rescan)
+  const managedSessionIds = new Set<string>(
+    [...agents.values()].map((a) => a.sessionId),
+  );
 
   const discovered = discoverSessionDirs();
   for (const sessionId of discovered) {
     if (!knownSessionIds.has(sessionId)) {
       knownSessionIds.add(sessionId);
-      // Skip if an agent already exists for this session (e.g. restored sessions)
       if (!managedSessionIds.has(sessionId)) {
         registerNewSession(
           sessionId,
