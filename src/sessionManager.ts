@@ -21,6 +21,43 @@ export function getSessionsBasePath(): string {
 }
 
 /**
+ * Read the workspace.yaml from a session directory and extract cwd / git_root.
+ * Returns null if the file doesn't exist or can't be parsed.
+ */
+export function readSessionWorkspaceMeta(
+  sessionDir: string,
+): { cwd: string; gitRoot?: string } | null {
+  const yamlPath = path.join(sessionDir, 'workspace.yaml');
+  try {
+    if (!fs.existsSync(yamlPath)) return null;
+    const content = fs.readFileSync(yamlPath, 'utf-8');
+    const cwd = content.match(/^cwd:\s*(.+)$/m)?.[1]?.trim();
+    if (!cwd) return null;
+    const gitRoot = content.match(/^git_root:\s*(.+)$/m)?.[1]?.trim();
+    return { cwd, gitRoot };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if the session belongs to one of the provided workspace paths.
+ * If `workspacePaths` is empty/null, every session matches (show-all mode).
+ */
+export function sessionMatchesWorkspace(
+  sessionId: string,
+  workspacePaths: readonly string[],
+): boolean {
+  if (workspacePaths.length === 0) return true;
+  const base = getSessionsBasePath();
+  const meta = readSessionWorkspaceMeta(path.join(base, sessionId));
+  if (!meta) return true; // no workspace.yaml → include as fallback
+  return workspacePaths.some(
+    (wp) => meta.cwd === wp || meta.gitRoot === wp,
+  );
+}
+
+/**
  * Discover all active Copilot CLI session directories.
  * Returns the set of session UUIDs found under ~/.copilot/session-state/
  */
@@ -34,6 +71,45 @@ export function discoverSessionDirs(): string[] {
       .map((e) => e.name);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Remove all agents whose sessions do not match the given workspace paths.
+ * Sends `agentClosed` for each removed agent. Used when switching to workspace-only mode.
+ */
+export function pruneAgentsOutsideWorkspace(
+  agents: Map<number, SessionState>,
+  knownSessionIds: Set<string>,
+  workspacePaths: readonly string[],
+  fileWatchers: Map<number, fs.FSWatcher>,
+  pollingTimers: Map<number, ReturnType<typeof setInterval>>,
+  waitingTimers: Map<number, ReturnType<typeof setTimeout>>,
+  permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
+  jsonlPollTimers: Map<number, ReturnType<typeof setInterval>>,
+  webview: vscode.Webview | undefined,
+  persistSessions: () => void,
+): void {
+  const toRemove: number[] = [];
+  for (const [id, agent] of agents) {
+    if (!sessionMatchesWorkspace(agent.sessionId, workspacePaths)) {
+      toRemove.push(id);
+    }
+  }
+  for (const id of toRemove) {
+    const agent = agents.get(id);
+    if (agent) knownSessionIds.delete(agent.sessionId);
+    removeAgent(
+      id,
+      agents,
+      fileWatchers,
+      pollingTimers,
+      waitingTimers,
+      permissionTimers,
+      jsonlPollTimers,
+      persistSessions,
+    );
+    webview?.postMessage({ type: 'agentClosed', id });
   }
 }
 
