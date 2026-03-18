@@ -299,6 +299,7 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
       this.jsonlPollTimers,
       this.webview,
       this.persistSessions,
+      this.workspacePaths,
     );
   }
 
