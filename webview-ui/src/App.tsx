@@ -411,6 +411,8 @@ function App() {
         agentIntents={agentIntents}
         agentToolHistory={agentToolHistory}
         agentStatuses={agentStatuses}
+        agentTools={agentTools}
+        subagentCharacters={subagentCharacters}
         onClose={() => setDetailPanelAgentId(null)}
         onFocusAgent={handleFocusAgent}
       />
