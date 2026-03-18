@@ -131,11 +131,13 @@ export function seedInitialSessions(
   permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
   jsonlPollTimers: Map<number, ReturnType<typeof setInterval>>,
   persistSessions: () => void,
+  workspacePaths: readonly string[] = [],
 ): void {
   const managedSessionIds = new Set<string>(
     [...agents.values()].map((a) => a.sessionId),
   );
   for (const sessionId of discoverSessionDirs()) {
+    if (!sessionMatchesWorkspace(sessionId, workspacePaths)) continue;
     if (!knownSessionIds.has(sessionId)) {
       knownSessionIds.add(sessionId);
       if (!managedSessionIds.has(sessionId)) {
@@ -174,6 +176,7 @@ export function ensureSessionScan(
   jsonlPollTimers: Map<number, ReturnType<typeof setInterval>>,
   webview: vscode.Webview | undefined,
   persistSessions: () => void,
+  workspacePaths: readonly string[] = [],
 ): void {
   if (sessionScanTimerRef.current) return;
 
@@ -189,6 +192,7 @@ export function ensureSessionScan(
       jsonlPollTimers,
       webview,
       persistSessions,
+      workspacePaths,
     );
   }, SESSION_SCAN_INTERVAL_MS);
 }
@@ -208,6 +212,7 @@ export function scanForNewSessions(
   jsonlPollTimers: Map<number, ReturnType<typeof setInterval>>,
   webview: vscode.Webview | undefined,
   persistSessions: () => void,
+  workspacePaths: readonly string[] = [],
 ): void {
   // Build set of session IDs that already have an agent (guards against duplicates on rescan)
   const managedSessionIds = new Set<string>(
@@ -216,6 +221,7 @@ export function scanForNewSessions(
 
   const discovered = discoverSessionDirs();
   for (const sessionId of discovered) {
+    if (!sessionMatchesWorkspace(sessionId, workspacePaths)) continue;
     if (!knownSessionIds.has(sessionId)) {
       knownSessionIds.add(sessionId);
       if (!managedSessionIds.has(sessionId)) {

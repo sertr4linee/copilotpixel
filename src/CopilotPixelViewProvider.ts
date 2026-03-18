@@ -25,6 +25,7 @@ import {
   ensureSessionScan,
   getSessionsBasePath,
   persistSessions,
+  pruneAgentsOutsideWorkspace,
   removeAgent,
   restoreSessions,
   scanForNewSessions,
@@ -49,6 +50,12 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
   // Session discovery
   knownSessionIds = new Set<string>();
   sessionScanTimer = { current: null as ReturnType<typeof setInterval> | null };
+  showAllSessions = false; // default: workspace-only mode
+
+  private get workspacePaths(): string[] {
+    if (this.showAllSessions) return [];
+    return (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+  }
 
   // Bundled default layout
   defaultLayout: Record<string, unknown> | null = null;
