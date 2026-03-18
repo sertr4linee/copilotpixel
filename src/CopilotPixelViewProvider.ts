@@ -138,6 +138,20 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
           this.persistSessions,
         );
 
+        // Silently register all sessions discovered on disk so sendExistingAgents
+        // can display them all at once without sending individual agentCreated messages.
+        seedInitialSessions(
+          this.knownSessionIds,
+          this.nextAgentId,
+          this.agents,
+          this.fileWatchers,
+          this.pollingTimers,
+          this.waitingTimers,
+          this.permissionTimers,
+          this.jsonlPollTimers,
+          this.persistSessions,
+        );
+
         const soundEnabled = this.context.globalState.get<boolean>(GLOBAL_KEY_SOUND_ENABLED, true);
         this.webview?.postMessage({ type: 'settingsLoaded', soundEnabled });
 
