@@ -48,6 +48,8 @@ const btnActive: React.CSSProperties = {
 export function BottomToolbar({
   isEditMode,
   onRescanSessions,
+  showAllSessions,
+  onToggleShowAll,
   onToggleEditMode,
   isDebugMode,
   onToggleDebugMode,
@@ -76,6 +78,26 @@ export function BottomToolbar({
         title="Rescan Copilot CLI sessions"
       >
         ↻ Rescan
+      </button>
+      <button
+        onClick={() => onToggleShowAll(!showAllSessions)}
+        onMouseEnter={() => setHovered('showall')}
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          ...btnBase,
+          padding: '5px 10px',
+          background: showAllSessions
+            ? 'var(--pixel-active-bg)'
+            : hovered === 'showall'
+            ? 'var(--pixel-btn-hover-bg)'
+            : btnBase.background,
+          border: showAllSessions
+            ? '2px solid var(--pixel-accent)'
+            : '2px solid transparent',
+        }}
+        title={showAllSessions ? 'Showing all sessions — click to filter by workspace' : 'Showing workspace sessions — click to show all'}
+      >
+        {showAllSessions ? '🌐' : '📁'}
       </button>
       <button
         onClick={onToggleEditMode}
