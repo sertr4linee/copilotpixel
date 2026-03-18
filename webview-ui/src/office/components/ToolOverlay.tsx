@@ -120,6 +120,12 @@ export function ToolOverlay({
           activityText = getActivityText(id, agentTools, ch.isActive);
         }
 
+        // Session metadata for popup (only show on hover/select, not for sub-agents)
+        const meta = !isSub ? sessionMeta[id] : undefined;
+        const intent = !isSub ? agentIntents[id] : undefined;
+        const repoLine = meta?.repository ?? meta?.branch ?? null;
+        const summaryLine = meta?.summary ?? null;
+
         // Determine dot color
         const tools = agentTools[id];
         const hasPermission = subHasPermission || tools?.some((t) => t.permissionWait && !t.done);
