@@ -413,5 +413,6 @@ export function useExtensionMessages(
     layoutReady,
     layoutWasReset,
     loadedAssets,
+    showAllSessions,
   };
 }
