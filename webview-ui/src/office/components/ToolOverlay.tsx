@@ -209,6 +209,49 @@ export function ToolOverlay({
                     {ch.folderName}
                   </span>
                 )}
+                {(isSelected || isHovered) && repoLine && (
+                  <span
+                    style={{
+                      fontSize: '15px',
+                      color: 'var(--vscode-charts-blue, #3794ff)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                      opacity: 0.85,
+                    }}
+                  >
+                    {repoLine}
+                  </span>
+                )}
+                {(isSelected || isHovered) && intent && (
+                  <span
+                    style={{
+                      fontSize: '15px',
+                      color: 'var(--vscode-charts-yellow, #cca700)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                    }}
+                    title={intent}
+                  >
+                    ⚡ {intent}
+                  </span>
+                )}
+                {isSelected && summaryLine && (
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      color: 'rgba(255,255,255,0.5)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                      fontStyle: 'italic',
+                    }}
+                    title={summaryLine}
+                  >
+                    {summaryLine.length > 50 ? summaryLine.slice(0, 50) + '…' : summaryLine}
+                  </span>
+                )}
               </div>
               {isSelected && !isSub && (
                 <button
