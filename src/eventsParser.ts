@@ -234,6 +234,14 @@ export function processEventsLine(
       agent.activeToolStatuses.set(toolCallId, status);
       agent.activeToolNames.set(toolCallId, toolName);
 
+      // Accumulate tool history (skip report_intent — shown via intent badge)
+      if (toolName !== 'report_intent') {
+        const entry = { toolName, status, timestamp: Date.now() };
+        agent.toolHistory.push(entry);
+        if (agent.toolHistory.length > 50) agent.toolHistory.shift();
+        webview?.postMessage({ type: 'agentToolHistoryUpdate', id: agentId, entry });
+      }
+
       // report_intent: broadcast current intent to webview for display
       if (toolName === 'report_intent') {
         const intent = typeof toolArgs.intent === 'string' ? toolArgs.intent : '';

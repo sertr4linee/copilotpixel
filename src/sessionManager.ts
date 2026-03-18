@@ -293,6 +293,7 @@ function registerNewSession(
     isWaiting: false,
     permissionSent: false,
     hadToolsInTurn: false,
+    toolHistory: [],
   };
 
   agents.set(id, agent);
@@ -418,6 +419,7 @@ export function restoreSessions(
       isWaiting: false,
       permissionSent: false,
       hadToolsInTurn: false,
+      toolHistory: [],
       branch: p.branch,
       repository: p.repository,
       cwd: p.cwd,

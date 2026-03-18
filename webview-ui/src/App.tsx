@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AgentDetailPanel } from './components/AgentDetailPanel.js';
 import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
+import { ScenePicker, useSceneTheme } from './components/ScenePicker.js';
+import { StatsHeader } from './components/StatsHeader.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
@@ -140,6 +143,7 @@ function App() {
     agentTools,
     agentStatuses,
     agentIntents,
+    agentToolHistory,
     subagentTools,
     subagentCharacters,
     layoutReady,
@@ -154,6 +158,9 @@ function App() {
 
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
+  const [detailPanelAgentId, setDetailPanelAgentId] = useState<number | null>(null);
+
+  const { theme: sceneTheme, filter: sceneFilter, setTheme: setSceneTheme } = useSceneTheme();
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), []);
   const handleToggleAlwaysShowOverlay = useCallback(
@@ -188,7 +195,11 @@ function App() {
     const os = getOfficeState();
     const meta = os.subagentMeta.get(agentId);
     const focusId = meta ? meta.parentAgentId : agentId;
-    vscode.postMessage({ type: 'focusAgent', id: focusId });
+    setDetailPanelAgentId(focusId);
+  }, []);
+
+  const handleFocusAgent = useCallback((id: number) => {
+    vscode.postMessage({ type: 'focusAgent', id });
   }, []);
 
   const officeState = getOfficeState();
@@ -244,22 +255,25 @@ function App() {
         .pixel-agents-migration-btn:hover { filter: brightness(0.8); }
       `}</style>
 
-      <OfficeCanvas
-        officeState={officeState}
-        onClick={handleClick}
-        isEditMode={editor.isEditMode}
-        editorState={editorState}
-        onEditorTileAction={editor.handleEditorTileAction}
-        onEditorEraseAction={editor.handleEditorEraseAction}
-        onEditorSelectionChange={editor.handleEditorSelectionChange}
-        onDeleteSelected={editor.handleDeleteSelected}
-        onRotateSelected={editor.handleRotateSelected}
-        onDragMove={editor.handleDragMove}
-        editorTick={editor.editorTick}
-        zoom={editor.zoom}
-        onZoomChange={editor.handleZoomChange}
-        panRef={editor.panRef}
-      />
+      {/* Canvas with optional scene filter */}
+      <div style={{ position: 'absolute', inset: 0, filter: sceneFilter || undefined }}>
+        <OfficeCanvas
+          officeState={officeState}
+          onClick={handleClick}
+          isEditMode={editor.isEditMode}
+          editorState={editorState}
+          onEditorTileAction={editor.handleEditorTileAction}
+          onEditorEraseAction={editor.handleEditorEraseAction}
+          onEditorSelectionChange={editor.handleEditorSelectionChange}
+          onDeleteSelected={editor.handleDeleteSelected}
+          onRotateSelected={editor.handleRotateSelected}
+          onDragMove={editor.handleDragMove}
+          editorTick={editor.editorTick}
+          zoom={editor.zoom}
+          onZoomChange={editor.handleZoomChange}
+          panRef={editor.panRef}
+        />
+      </div>
 
       {!isDebugMode && <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />}
 
@@ -283,6 +297,8 @@ function App() {
         onToggleDebugMode={handleToggleDebugMode}
         alwaysShowOverlay={alwaysShowOverlay}
         onToggleAlwaysShowOverlay={handleToggleAlwaysShowOverlay}
+        sceneTheme={sceneTheme}
+        onSceneChange={setSceneTheme}
       />
 
       {editor.isEditMode && editor.isDirty && (
@@ -367,6 +383,14 @@ function App() {
           zoom={editor.zoom}
           panRef={editor.panRef}
           subagentCharacters={subagentCharacters}
+        />
+      )}
+
+      {!isDebugMode && !editor.isEditMode && (
+        <StatsHeader
+          agents={agents}
+          agentStatuses={agentStatuses}
+          agentTools={agentTools}
         />
       )}
 

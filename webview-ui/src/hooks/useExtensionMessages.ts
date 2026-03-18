@@ -11,6 +11,7 @@ import type { OfficeLayout, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
 import { vscode } from '../vscodeApi.js';
 import type { SessionMeta } from '../components/AgentLabels.js';
+import type { ToolHistoryEntry } from '../components/AgentDetailPanel.js';
 
 export interface SubagentCharacter {
   id: number;
@@ -48,6 +49,7 @@ export interface ExtensionMessageState {
   agentTools: Record<number, ToolActivity[]>;
   agentStatuses: Record<number, string>;
   agentIntents: Record<number, string>;
+  agentToolHistory: Record<number, ToolHistoryEntry[]>;
   subagentTools: Record<number, Record<string, ToolActivity[]>>;
   subagentCharacters: SubagentCharacter[];
   sessionMeta: Record<number, SessionMeta>;
@@ -76,6 +78,7 @@ export function useExtensionMessages(
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({});
   const [agentIntents, setAgentIntents] = useState<Record<number, string>>({});
+  const [agentToolHistory, setAgentToolHistory] = useState<Record<number, ToolHistoryEntry[]>>({});
   const [subagentTools, setSubagentTools] = useState<
     Record<number, Record<string, ToolActivity[]>>
   >({});
@@ -147,6 +150,15 @@ export function useExtensionMessages(
           }
           return { ...prev, [id]: intent };
         });
+      } else if (msg.type === 'agentToolHistoryUpdate') {
+        const id = msg.id as number;
+        const entry = msg.entry as ToolHistoryEntry;
+        setAgentToolHistory((prev) => {
+          const existing = prev[id] ?? [];
+          const updated = [...existing, entry];
+          if (updated.length > 50) updated.shift();
+          return { ...prev, [id]: updated };
+        });
       } else if (msg.type === 'agentClosed') {
         const id = msg.id as number;
         setAgents((prev) => prev.filter((a) => a !== id));
@@ -176,6 +188,12 @@ export function useExtensionMessages(
           return next;
         });
         setAgentIntents((prev) => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        setAgentToolHistory((prev) => {
           if (!(id in prev)) return prev;
           const next = { ...prev };
           delete next[id];
@@ -432,6 +450,7 @@ export function useExtensionMessages(
     agentTools,
     agentStatuses,
     agentIntents,
+    agentToolHistory,
     subagentTools,
     subagentCharacters,
     sessionMeta,

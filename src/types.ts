@@ -1,3 +1,9 @@
+export interface ToolHistoryEntry {
+  toolName: string;
+  status: string;
+  timestamp: number;
+}
+
 export interface SessionState {
   id: number;
   sessionId: string;
@@ -21,6 +27,7 @@ export interface SessionState {
   summary?: string;      // from workspace.yaml
   checkpointCount?: number;
   currentIntent?: string; // last report_intent text
+  toolHistory: ToolHistoryEntry[]; // accumulated tool history (max 50)
 }
 
 export interface PersistedSession {

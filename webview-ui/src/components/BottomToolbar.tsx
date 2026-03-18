@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { ScenePicker } from './ScenePicker.js';
+import type { SceneThemeKey } from './ScenePicker.js';
 import { SettingsModal } from './SettingsModal.js';
 
 interface BottomToolbarProps {
@@ -12,6 +14,8 @@ interface BottomToolbarProps {
   onToggleDebugMode: () => void;
   alwaysShowOverlay: boolean;
   onToggleAlwaysShowOverlay: () => void;
+  sceneTheme: SceneThemeKey;
+  onSceneChange: (t: SceneThemeKey) => void;
 }
 
 const panelStyle: React.CSSProperties = {
@@ -55,9 +59,12 @@ export function BottomToolbar({
   onToggleDebugMode,
   alwaysShowOverlay,
   onToggleAlwaysShowOverlay,
+  sceneTheme,
+  onSceneChange,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSceneOpen, setIsSceneOpen] = useState(false);
 
   return (
     <div style={panelStyle}>
@@ -115,6 +122,31 @@ export function BottomToolbar({
       >
         Layout
       </button>
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => { setIsSceneOpen((v) => !v); setIsSettingsOpen(false); }}
+          onMouseEnter={() => setHovered('scene')}
+          onMouseLeave={() => setHovered(null)}
+          style={
+            isSceneOpen
+              ? { ...btnActive }
+              : {
+                  ...btnBase,
+                  background: hovered === 'scene' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+                }
+          }
+          title="Change scene theme"
+        >
+          🎨
+        </button>
+        {isSceneOpen && (
+          <ScenePicker
+            currentTheme={sceneTheme}
+            onSelect={onSceneChange}
+            onClose={() => setIsSceneOpen(false)}
+          />
+        )}
+      </div>
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setIsSettingsOpen((v) => !v)}
