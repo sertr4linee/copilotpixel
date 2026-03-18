@@ -5,6 +5,8 @@ import { SettingsModal } from './SettingsModal.js';
 interface BottomToolbarProps {
   isEditMode: boolean;
   onRescanSessions: () => void;
+  showAllSessions: boolean;
+  onToggleShowAll: (showAll: boolean) => void;
   onToggleEditMode: () => void;
   isDebugMode: boolean;
   onToggleDebugMode: () => void;

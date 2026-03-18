@@ -617,6 +617,7 @@ export function useEditorActions(
     saveTimerRef,
     setLastSavedLayout,
     handleRescanSessions,
+    handleToggleShowAll,
     handleToggleEditMode,
     handleToolChange,
     handleTileTypeChange,
