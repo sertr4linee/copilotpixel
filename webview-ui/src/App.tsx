@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
 import { ZoomControls } from './components/ZoomControls.js';
@@ -138,12 +139,14 @@ function App() {
     selectedAgent,
     agentTools,
     agentStatuses,
+    agentIntents,
     subagentTools,
     subagentCharacters,
     layoutReady,
     layoutWasReset,
     loadedAssets,
     showAllSessions,
+    sessionMeta,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false);
@@ -348,6 +351,22 @@ function App() {
           panRef={editor.panRef}
           onCloseAgent={handleCloseAgent}
           alwaysShowOverlay={alwaysShowOverlay}
+          sessionMeta={sessionMeta}
+          agentIntents={agentIntents}
+        />
+      )}
+
+      {!isDebugMode && (
+        <AgentLabels
+          officeState={officeState}
+          agents={agents}
+          agentStatuses={agentStatuses}
+          agentIntents={agentIntents}
+          sessionMeta={sessionMeta}
+          containerRef={containerRef}
+          zoom={editor.zoom}
+          panRef={editor.panRef}
+          subagentCharacters={subagentCharacters}
         />
       )}
 
