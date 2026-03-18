@@ -27,6 +27,8 @@ import {
   persistSessions,
   removeAgent,
   restoreSessions,
+  scanForNewSessions,
+  seedInitialSessions,
   sendExistingAgents,
   sendLayout,
 } from './sessionManager.js';
@@ -75,12 +77,25 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'rescanSessions') {
-        // Manual rescan: clear known sessions and re-register all discovered ones
+        // Clear known set and stop the timer so ensureSessionScan can restart.
+        // Then immediately scan: any session not already in agents gets agentCreated.
         this.knownSessionIds.clear();
         if (this.sessionScanTimer.current) {
           clearInterval(this.sessionScanTimer.current);
           this.sessionScanTimer.current = null;
         }
+        scanForNewSessions(
+          this.knownSessionIds,
+          this.nextAgentId,
+          this.agents,
+          this.fileWatchers,
+          this.pollingTimers,
+          this.waitingTimers,
+          this.permissionTimers,
+          this.jsonlPollTimers,
+          this.webview,
+          this.persistSessions,
+        );
         this.startSessionScan();
       } else if (message.type === 'focusAgent') {
         // No terminal to focus in Copilot CLI mode — open the session folder instead
