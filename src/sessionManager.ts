@@ -56,10 +56,21 @@ export function ensureSessionScan(
 ): void {
   if (sessionScanTimerRef.current) return;
 
-  // Seed with already-known sessions to avoid double-registering on startup
-  for (const sid of discoverSessionDirs()) {
-    knownSessionIds.add(sid);
-  }
+  // Run immediately so existing sessions appear at once (don't wait for first tick).
+  // restoreSessions() already populated knownSessionIds for restored sessions, so
+  // only truly new sessions will be registered here.
+  scanForNewSessions(
+    knownSessionIds,
+    nextAgentIdRef,
+    agents,
+    fileWatchers,
+    pollingTimers,
+    waitingTimers,
+    permissionTimers,
+    jsonlPollTimers,
+    webview,
+    persistSessions,
+  );
 
   sessionScanTimerRef.current = setInterval(() => {
     scanForNewSessions(
@@ -89,22 +100,31 @@ function scanForNewSessions(
   webview: vscode.Webview | undefined,
   persistSessions: () => void,
 ): void {
+  // Build set of session IDs that already have a managed agent (survives rescan)
+  const managedSessionIds = new Set<string>();
+  for (const agent of agents.values()) {
+    managedSessionIds.add(agent.sessionId);
+  }
+
   const discovered = discoverSessionDirs();
   for (const sessionId of discovered) {
     if (!knownSessionIds.has(sessionId)) {
       knownSessionIds.add(sessionId);
-      registerNewSession(
-        sessionId,
-        nextAgentIdRef,
-        agents,
-        fileWatchers,
-        pollingTimers,
-        waitingTimers,
-        permissionTimers,
-        jsonlPollTimers,
-        webview,
-        persistSessions,
-      );
+      // Skip if an agent already exists for this session (e.g. restored sessions)
+      if (!managedSessionIds.has(sessionId)) {
+        registerNewSession(
+          sessionId,
+          nextAgentIdRef,
+          agents,
+          fileWatchers,
+          pollingTimers,
+          waitingTimers,
+          permissionTimers,
+          jsonlPollTimers,
+          webview,
+          persistSessions,
+        );
+      }
     }
   }
 }
