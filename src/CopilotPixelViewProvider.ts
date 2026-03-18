@@ -184,8 +184,24 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
           this.persistSessions,
         );
 
-        // Silently register all sessions discovered on disk so sendExistingAgents
-        // can display them all at once without sending individual agentCreated messages.
+        // Prune restored sessions that don't belong to the current workspace.
+        // (restoreSessions has no workspace filter, so we clean up here)
+        if (!this.showAllSessions) {
+          pruneAgentsOutsideWorkspace(
+            this.agents,
+            this.knownSessionIds,
+            this.workspacePaths,
+            this.fileWatchers,
+            this.pollingTimers,
+            this.waitingTimers,
+            this.permissionTimers,
+            this.jsonlPollTimers,
+            undefined, // webview not ready yet, no agentClosed needed
+            this.persistSessions,
+          );
+        }
+
+        // Silently register sessions on disk filtered by workspace.
         seedInitialSessions(
           this.knownSessionIds,
           this.nextAgentId,

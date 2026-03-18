@@ -51,7 +51,8 @@ export function sessionMatchesWorkspace(
   if (workspacePaths.length === 0) return true;
   const base = getSessionsBasePath();
   const meta = readSessionWorkspaceMeta(path.join(base, sessionId));
-  if (!meta) return true; // no workspace.yaml → include as fallback
+  // If we can't determine the workspace, exclude in filtered mode (conservative)
+  if (!meta) return false;
   return workspacePaths.some(
     (wp) => meta.cwd === wp || meta.gitRoot === wp,
   );
@@ -67,7 +68,12 @@ export function discoverSessionDirs(): string[] {
     if (!fs.existsSync(base)) return [];
     return fs
       .readdirSync(base, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && /^[0-9a-f-]{36}$/i.test(e.name))
+      .filter(
+        (e) =>
+          e.isDirectory() &&
+          /^[0-9a-f-]{36}$/i.test(e.name) &&
+          fs.existsSync(path.join(base, e.name, EVENTS_FILE_NAME)),
+      )
       .map((e) => e.name);
   } catch {
     return [];
