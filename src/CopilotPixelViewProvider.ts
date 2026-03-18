@@ -196,6 +196,7 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
           this.permissionTimers,
           this.jsonlPollTimers,
           this.persistSessions,
+          this.workspacePaths,
         );
 
         const soundEnabled = this.context.globalState.get<boolean>(GLOBAL_KEY_SOUND_ENABLED, true);
