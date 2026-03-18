@@ -107,6 +107,10 @@ export function useEditorActions(
     vscode.postMessage({ type: 'rescanSessions' });
   }, []);
 
+  const handleToggleShowAll = useCallback((showAll: boolean) => {
+    vscode.postMessage({ type: 'setShowAllSessions', showAll });
+  }, []);
+
   const handleToggleEditMode = useCallback(() => {
     setIsEditMode((prev) => {
       const next = !prev;
