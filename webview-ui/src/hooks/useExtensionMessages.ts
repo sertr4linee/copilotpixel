@@ -13,6 +13,7 @@ import { setWallSprites } from '../office/wallTiles.js';
 import { vscode } from '../vscodeApi.js';
 import type { SessionMeta } from '../components/AgentLabels.js';
 import type { ToolHistoryEntry } from '../components/AgentDetailPanel.js';
+import type { SkillInfo } from '../components/SkillsPanel.js';
 
 // Entrance tile — top-left corner of the walkable floor area
 const ENTRANCE_COL = 2;
@@ -62,6 +63,7 @@ export interface ExtensionMessageState {
   layoutWasReset: boolean;
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> };
   showAllSessions: boolean;
+  skills: SkillInfo[];
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -96,6 +98,7 @@ export function useExtensionMessages(
   >();
 
   const [showAllSessions, setShowAllSessions] = useState(false);
+  const [skills, setSkills] = useState<SkillInfo[]>([]);
   const layoutReadyRef = useRef(false);
   // Agents walking to exit before removal
   const pendingExitsRef = useRef<Map<number, { col: number; row: number }>>(new Map());
@@ -506,6 +509,8 @@ export function useExtensionMessages(
         } catch (err) {
           console.error(`[Webview] Error processing furnitureAssetsLoaded:`, err);
         }
+      } else if (msg.type === 'skillsLoaded') {
+        setSkills(msg.skills as SkillInfo[]);
       }
     };
     window.addEventListener('message', handler);
@@ -527,5 +532,6 @@ export function useExtensionMessages(
     layoutWasReset,
     loadedAssets,
     showAllSessions,
+    skills,
   };
 }

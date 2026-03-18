@@ -33,6 +33,12 @@ import {
   sendExistingAgents,
   sendLayout,
 } from './sessionManager.js';
+import {
+  createSkill,
+  deleteSkill,
+  scanSkills,
+  setSkillEnabled,
+} from './skillsScanner.js';
 import type { SessionState } from './types.js';
 
 export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
@@ -172,6 +178,43 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
         writeLayoutToFile(message.layout as Record<string, unknown>);
       } else if (message.type === 'setSoundEnabled') {
         this.context.globalState.update(GLOBAL_KEY_SOUND_ENABLED, message.enabled);
+      } else if (message.type === 'loadSkills') {
+        const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+        const skills = scanSkills(folders);
+        this.webview?.postMessage({ type: 'skillsLoaded', skills });
+      } else if (message.type === 'setSkillEnabled') {
+        try {
+          setSkillEnabled(message.filePath as string, message.enabled as boolean);
+        } catch (e) {
+          vscode.window.showErrorMessage(`Failed to toggle skill: ${String(e)}`);
+        }
+        const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+        this.webview?.postMessage({ type: 'skillsLoaded', skills: scanSkills(folders) });
+      } else if (message.type === 'createSkill') {
+        const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+        const targetDir =
+          folders.length > 0
+            ? require('path').join(folders[0], '.github', 'extensions')
+            : require('path').join(require('os').homedir(), '.github', 'extensions');
+        try {
+          createSkill(
+            targetDir,
+            message.name as string,
+            message.description as string,
+            message.content as string,
+          );
+        } catch (e) {
+          vscode.window.showErrorMessage(`Failed to create skill: ${String(e)}`);
+        }
+        this.webview?.postMessage({ type: 'skillsLoaded', skills: scanSkills(folders) });
+      } else if (message.type === 'deleteSkill') {
+        try {
+          deleteSkill(message.filePath as string);
+        } catch (e) {
+          vscode.window.showErrorMessage(`Failed to delete skill: ${String(e)}`);
+        }
+        const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+        this.webview?.postMessage({ type: 'skillsLoaded', skills: scanSkills(folders) });
       } else if (message.type === 'webviewReady') {
         restoreSessions(
           this.context,

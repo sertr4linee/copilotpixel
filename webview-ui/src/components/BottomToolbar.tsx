@@ -16,6 +16,7 @@ interface BottomToolbarProps {
   onToggleAlwaysShowOverlay: () => void;
   sceneTheme: SceneThemeKey;
   onSceneChange: (t: SceneThemeKey) => void;
+  onOpenSkills: () => void;
 }
 
 const panelStyle: React.CSSProperties = {
@@ -34,19 +35,32 @@ const panelStyle: React.CSSProperties = {
 };
 
 const btnBase: React.CSSProperties = {
-  padding: '5px 10px',
-  fontSize: '24px',
+  height: 30,
+  padding: '0 10px',
+  fontSize: 12,
+  lineHeight: '1',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   color: 'var(--pixel-text)',
   background: 'var(--pixel-btn-bg)',
   border: '2px solid transparent',
   borderRadius: 0,
   cursor: 'pointer',
+  flexShrink: 0,
 };
 
 const btnActive: React.CSSProperties = {
   ...btnBase,
   background: 'var(--pixel-active-bg)',
   border: '2px solid var(--pixel-accent)',
+};
+
+// Emoji-only buttons need a slightly larger font to stay visible at the fixed height
+const btnEmoji: React.CSSProperties = {
+  ...btnBase,
+  fontSize: 16,
+  padding: '0 8px',
 };
 
 export function BottomToolbar({
@@ -61,6 +75,7 @@ export function BottomToolbar({
   onToggleAlwaysShowOverlay,
   sceneTheme,
   onSceneChange,
+  onOpenSkills,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -91,13 +106,12 @@ export function BottomToolbar({
         onMouseEnter={() => setHovered('showall')}
         onMouseLeave={() => setHovered(null)}
         style={{
-          ...btnBase,
-          padding: '5px 10px',
+          ...btnEmoji,
           background: showAllSessions
             ? 'var(--pixel-active-bg)'
             : hovered === 'showall'
             ? 'var(--pixel-btn-hover-bg)'
-            : btnBase.background,
+            : btnEmoji.background,
           border: showAllSessions
             ? '2px solid var(--pixel-accent)'
             : '2px solid transparent',
@@ -129,10 +143,10 @@ export function BottomToolbar({
           onMouseLeave={() => setHovered(null)}
           style={
             isSceneOpen
-              ? { ...btnActive }
+              ? { ...btnEmoji, background: 'var(--pixel-active-bg)', border: '2px solid var(--pixel-accent)' }
               : {
-                  ...btnBase,
-                  background: hovered === 'scene' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+                  ...btnEmoji,
+                  background: hovered === 'scene' ? 'var(--pixel-btn-hover-bg)' : btnEmoji.background,
                 }
           }
           title="Change scene theme"
@@ -147,6 +161,18 @@ export function BottomToolbar({
           />
         )}
       </div>
+      <button
+        onClick={onOpenSkills}
+        onMouseEnter={() => setHovered('skills')}
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          ...btnEmoji,
+          background: hovered === 'skills' ? 'var(--pixel-btn-hover-bg)' : btnEmoji.background,
+        }}
+        title="Manage skills"
+      >
+        ⚡
+      </button>
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setIsSettingsOpen((v) => !v)}

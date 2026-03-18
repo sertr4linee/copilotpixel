@@ -5,6 +5,7 @@ import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { DebugView } from './components/DebugView.js';
 import { useSceneTheme } from './components/ScenePicker.js';
+import { SkillsPanel } from './components/SkillsPanel.js';
 import { StatsHeader } from './components/StatsHeader.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
@@ -151,6 +152,7 @@ function App() {
     loadedAssets,
     showAllSessions,
     sessionMeta,
+    skills,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   const [migrationNoticeDismissed, setMigrationNoticeDismissed] = useState(false);
@@ -159,6 +161,7 @@ function App() {
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
   const [detailPanelAgentId, setDetailPanelAgentId] = useState<number | null>(null);
+  const [showSkillsPanel, setShowSkillsPanel] = useState(false);
 
   const { theme: sceneTheme, filter: sceneFilter, setTheme: setSceneTheme } = useSceneTheme();
 
@@ -299,6 +302,10 @@ function App() {
         onToggleAlwaysShowOverlay={handleToggleAlwaysShowOverlay}
         sceneTheme={sceneTheme}
         onSceneChange={setSceneTheme}
+        onOpenSkills={() => {
+          vscode.postMessage({ type: 'loadSkills' });
+          setShowSkillsPanel(true);
+        }}
       />
 
       {editor.isEditMode && editor.isDirty && (
@@ -416,6 +423,13 @@ function App() {
         onClose={() => setDetailPanelAgentId(null)}
         onFocusAgent={handleFocusAgent}
       />
+
+      {showSkillsPanel && (
+        <SkillsPanel
+          skills={skills}
+          onClose={() => setShowSkillsPanel(false)}
+        />
+      )}
 
       {showMigrationNotice && (
         <div
