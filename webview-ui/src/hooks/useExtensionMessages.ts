@@ -85,7 +85,10 @@ export function useExtensionMessages(
     { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> } | undefined
   >();
 
+  const [showAllSessions, setShowAllSessions] = useState(false);
   const layoutReadyRef = useRef(false);
+
+  useEffect(() => {
     let pendingAgents: Array<{
       id: number;
       palette?: number;
