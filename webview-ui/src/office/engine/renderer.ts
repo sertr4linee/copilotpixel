@@ -691,4 +691,3 @@ export function renderFrame(
 
   return { offsetX, offsetY };
 }
-___BEGIN___COMMAND_DONE_MARKER___0

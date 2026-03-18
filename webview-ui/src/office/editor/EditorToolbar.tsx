@@ -735,4 +735,3 @@ export function EditorToolbar({
     </div>
   );
 }
-___BEGIN___COMMAND_DONE_MARKER___0
