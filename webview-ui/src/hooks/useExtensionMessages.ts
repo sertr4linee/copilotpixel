@@ -385,6 +385,10 @@ export function useExtensionMessages(
         if (typeof msg.showAllSessions === 'boolean') {
           setShowAllSessions(msg.showAllSessions);
         }
+      } else if (msg.type === 'showAllSessionsChanged') {
+        if (typeof msg.showAllSessions === 'boolean') {
+          setShowAllSessions(msg.showAllSessions);
+        }
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];

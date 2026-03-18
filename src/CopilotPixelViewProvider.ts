@@ -137,6 +137,9 @@ export class CopilotPixelViewProvider implements vscode.WebviewViewProvider {
             [], // empty = no filter
           );
         }
+        // Confirm state change back to webview so the toggle button updates
+        this.webview?.postMessage({ type: 'showAllSessionsChanged', showAllSessions: showAll });
+
         // Restart interval with updated filter
         if (this.sessionScanTimer.current) {
           clearInterval(this.sessionScanTimer.current);
